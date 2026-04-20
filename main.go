@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -43,7 +44,7 @@ func main() {
 
 	go func() {
 		log.Printf("server listening on %s", server.Addr)
-		if serveErr := server.ListenAndServe(); serveErr != nil && serveErr != http.ErrServerClosed {
+		if serveErr := server.ListenAndServe(); serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
 			log.Fatalf("server failed: %v", serveErr)
 		}
 	}()
