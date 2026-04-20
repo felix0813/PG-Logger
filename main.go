@@ -16,22 +16,26 @@ import (
 func main() {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		databaseURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+		log.Fatal("missing required env: DATABASE_URL")
 	}
 
+	addr := os.Getenv("SERVER_ADDR")
+	if addr == "" {
+		log.Fatal("missing required env: SERVER_ADDR")
+	}
+
+	log.Printf("starting pg-logger server")
 	db, err := storage.NewPostgres(databaseURL)
 	if err != nil {
 		log.Fatalf("init postgres failed: %v", err)
 	}
 	defer db.Close()
 
-	healthHandler := handler.NewHealthHandler(db)
-
 	mux := http.NewServeMux()
-	mux.HandleFunc("/logger/health", healthHandler.Health)
+	handler.RegisterRoutes(mux, db)
 
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         addr,
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
@@ -47,6 +51,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	log.Printf("shutdown signal received")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -54,4 +59,5 @@ func main() {
 	if shutdownErr := server.Shutdown(shutdownCtx); shutdownErr != nil {
 		log.Printf("server shutdown error: %v", shutdownErr)
 	}
+	log.Printf("server stopped")
 }

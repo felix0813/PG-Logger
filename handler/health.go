@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -26,6 +27,7 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.postgres.HealthCheck(ctx); err != nil {
+		log.Printf("health check failed: %v", err)
 		response["database"] = "down"
 		util.WriteJSON(w, http.StatusServiceUnavailable, response)
 		return
