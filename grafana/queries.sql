@@ -24,21 +24,20 @@
 
 -- 1) 日志明细（类 Kibana Discover）
 -- Panel 类型: Table
-SELECT
-  log_time AS "time",
-  app_code,
-  env,
-  level,
-  host,
-  trace_id,
-  request_id,
-  method,
-  path,
-  status_code,
-  duration_ms,
-  message,
-  exception,
-  extra
+SELECT log_time AS "time",
+       app_code,
+       env,
+       level,
+       host,
+       trace_id,
+       request_id,
+       method,
+       path,
+       status_code,
+       duration_ms,
+       message,
+       exception,
+       extra
 FROM app_log
 WHERE $__timeFilter(log_time)
   AND app_code ~ '^(${app_code:regex})$'
@@ -49,8 +48,7 @@ LIMIT ${limit:raw};
 
 -- 2) 日志量趋势（按时间桶）
 -- Panel 类型: Time series
-SELECT
-  $__timeGroupAlias(log_time, $__interval),
+SELECT $__timeGroupAlias(log_time, $__interval),
   count(*)::bigint AS value
 FROM app_log
 WHERE $__timeFilter(log_time)
@@ -62,9 +60,8 @@ ORDER BY 1;
 
 -- 3) 按级别统计
 -- Panel 类型: Bar chart / Pie chart / Table
-SELECT
-  level,
-  count(*)::bigint AS total
+SELECT level,
+       count(*)::bigint AS total
 FROM app_log
 WHERE $__timeFilter(log_time)
   AND app_code ~ '^(${app_code:regex})$'
@@ -74,9 +71,8 @@ ORDER BY total DESC;
 
 -- 4) 按应用统计
 -- Panel 类型: Bar chart / Table
-SELECT
-  app_code,
-  count(*)::bigint AS total
+SELECT app_code,
+       count(*)::bigint AS total
 FROM app_log
 WHERE $__timeFilter(log_time)
   AND level ~ '^(${level:regex})$'
@@ -86,47 +82,46 @@ ORDER BY total DESC;
 
 -- 5) 错误日志 TopN（ERROR/FATAL）
 -- Panel 类型: Table
-SELECT
-  message,
-  count(*)::bigint AS total
+SELECT message,
+       count(*)::bigint AS total
 FROM app_log
 WHERE $__timeFilter(log_time)
   AND app_code ~ '^(${app_code:regex})$'
   AND env ~ '^(${env:regex})$'
-  AND level IN ('ERROR', 'FATAL')
+  AND level IN ('ERROR'
+    , 'FATAL')
 GROUP BY message
 ORDER BY total DESC
 LIMIT 20;
 
 -- 6) 最近错误日志（排障面板）
 -- Panel 类型: Logs / Table
-SELECT
-  log_time AS "time",
-  app_code,
-  level,
-  trace_id,
-  request_id,
-  message,
-  exception
+SELECT log_time AS "time",
+       app_code,
+       level,
+       trace_id,
+       request_id,
+       message,
+       exception
 FROM app_log
 WHERE $__timeFilter(log_time)
   AND app_code ~ '^(${app_code:regex})$'
   AND env ~ '^(${env:regex})$'
-  AND level IN ('ERROR', 'FATAL')
+  AND level IN ('ERROR'
+    , 'FATAL')
 ORDER BY log_time DESC
 LIMIT 200;
 
 -- 7) 可选：用于日志详情跳转（通过 trace_id）
 -- Panel 类型: Table
-SELECT
-  log_time AS "time",
-  app_code,
-  level,
-  module,
-  logger,
-  message,
-  exception,
-  extra
+SELECT log_time AS "time",
+       app_code,
+       level,
+       module,
+       logger,
+       message,
+       exception,
+       extra
 FROM app_log
 WHERE $__timeFilter(log_time)
   AND trace_id = '${trace_id}'
