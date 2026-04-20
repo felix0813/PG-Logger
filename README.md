@@ -51,7 +51,7 @@ go run .
 
 - `POST /logger/logs`：新增日志
 - `GET /logger/logs`：查询日志
-  - 可选 query 参数：`app_code`、`level`、`env`、`limit`
+    - 可选 query 参数：`app_code`、`level`、`env`、`limit`
 - `DELETE /logger/logs?id={id}&log_time={RFC3339}`：删除日志
 
 #### 新增日志请求示例

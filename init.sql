@@ -1,13 +1,14 @@
-CREATE TABLE IF NOT EXISTS log_app (
-                                       id              BIGSERIAL PRIMARY KEY,
-                                       app_code        VARCHAR(64) NOT NULL UNIQUE,
-                                       app_name        VARCHAR(128) NOT NULL,
-                                       env             VARCHAR(32) NOT NULL DEFAULT 'prod',
-                                       enabled         BOOLEAN NOT NULL DEFAULT TRUE,
-                                       retention_days  INTEGER NOT NULL DEFAULT 30,
-                                       description     TEXT,
-                                       created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                                       updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS log_app
+(
+    id             BIGSERIAL PRIMARY KEY,
+    app_code       VARCHAR(64)  NOT NULL UNIQUE,
+    app_name       VARCHAR(128) NOT NULL,
+    env            VARCHAR(32)  NOT NULL DEFAULT 'prod',
+    enabled        BOOLEAN      NOT NULL DEFAULT TRUE,
+    retention_days INTEGER      NOT NULL DEFAULT 30,
+    description    TEXT,
+    created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
 COMMENT ON TABLE log_app IS '应用日志配置表，用于记录日志来源应用、所属环境、是否启用及日志保留天数等配置';
@@ -22,29 +23,30 @@ COMMENT ON COLUMN log_app.description IS '应用说明或备注';
 COMMENT ON COLUMN log_app.created_at IS '记录创建时间';
 COMMENT ON COLUMN log_app.updated_at IS '记录更新时间';
 
-CREATE TABLE IF NOT EXISTS app_log (
-                                       id              BIGSERIAL ,
-                                       log_time        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                                       app_code        VARCHAR(64) NOT NULL,
-                                       env             VARCHAR(32) NOT NULL DEFAULT 'prod',
-                                       level           VARCHAR(16) NOT NULL,
-                                       host            VARCHAR(128),
-                                       instance_id     VARCHAR(128),
-                                       trace_id        VARCHAR(128),
-                                       span_id         VARCHAR(128),
-                                       module          VARCHAR(128),
-                                       logger          VARCHAR(256),
-                                       user_id         VARCHAR(128),
-                                       request_id      VARCHAR(128),
-                                       path            TEXT,
-                                       method          VARCHAR(16),
-                                       status_code     INTEGER,
-                                       duration_ms     INTEGER,
-                                       message         TEXT NOT NULL,
-                                       exception       TEXT,
-                                       extra           JSONB NOT NULL DEFAULT '{}'::jsonb,
-                                       created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                                       PRIMARY KEY (id, log_time)
+CREATE TABLE IF NOT EXISTS app_log
+(
+    id          BIGSERIAL,
+    log_time    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    app_code    VARCHAR(64) NOT NULL,
+    env         VARCHAR(32) NOT NULL DEFAULT 'prod',
+    level       VARCHAR(16) NOT NULL,
+    host        VARCHAR(128),
+    instance_id VARCHAR(128),
+    trace_id    VARCHAR(128),
+    span_id     VARCHAR(128),
+    module      VARCHAR(128),
+    logger      VARCHAR(256),
+    user_id     VARCHAR(128),
+    request_id  VARCHAR(128),
+    path        TEXT,
+    method      VARCHAR(16),
+    status_code INTEGER,
+    duration_ms INTEGER,
+    message     TEXT        NOT NULL,
+    exception   TEXT,
+    extra       JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id, log_time)
 ) PARTITION BY RANGE (log_time);
 
 COMMENT ON TABLE app_log IS '应用日志主表，用于存储应用运行过程中产生的日志，支持结构化字段和扩展 JSON 字段';
@@ -74,15 +76,16 @@ COMMENT ON COLUMN app_log.created_at IS '记录写入数据库的时间';
 CREATE OR REPLACE FUNCTION create_app_log_partition(p_target_date DATE)
     RETURNS VOID
     LANGUAGE plpgsql
-AS $$
+AS
+$$
 DECLARE
-    v_month_start   DATE;
-    v_next_month    DATE;
+    v_month_start    DATE;
+    v_next_month     DATE;
     v_partition_name TEXT;
 BEGIN
     -- 取传入日期所在月份的第一天
     v_month_start := date_trunc('month', p_target_date)::date;
-    v_next_month  := (v_month_start + INTERVAL '1 month')::date;
+    v_next_month := (v_month_start + INTERVAL '1 month')::date;
 
     -- 生成分区表名，例如 app_log_2026_05
     v_partition_name := 'app_log_' || to_char(v_month_start, 'YYYY_MM');
@@ -97,3 +100,13 @@ BEGIN
             );
 END;
 $$;
+
+-- 添加外键约束，确保 app_log.app_code 必须存在于 log_app.app_code 中
+ALTER TABLE app_log
+    ADD CONSTRAINT fk_app_log_app_code
+        FOREIGN KEY (app_code)
+            REFERENCES log_app(app_code)
+            ON DELETE RESTRICT
+            ON UPDATE CASCADE;
+
+COMMENT ON CONSTRAINT fk_app_log_app_code ON app_log IS '外键约束：确保日志的应用编码必须在应用配置表中存在';
