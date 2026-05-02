@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"bufio"
@@ -17,14 +17,14 @@ import (
 	"pg-logger/storage"
 )
 
-type redisStreamConsumer struct {
+type RedisStreamConsumer struct {
 	addr      string
 	streamKey string
 	postgres  *storage.Postgres
 	blockMS   int64
 }
 
-func newRedisStreamConsumer(postgres *storage.Postgres) (*redisStreamConsumer, bool) {
+func NewRedisStreamConsumer(postgres *storage.Postgres) (*RedisStreamConsumer, bool) {
 	addr := strings.TrimSpace(os.Getenv("REDIS_ADDR"))
 	streamKey := strings.TrimSpace(os.Getenv("REDIS_STREAM_KEY"))
 	if addr == "" || streamKey == "" {
@@ -42,10 +42,10 @@ func newRedisStreamConsumer(postgres *storage.Postgres) (*redisStreamConsumer, b
 		}
 	}
 
-	return &redisStreamConsumer{addr: addr, streamKey: streamKey, postgres: postgres, blockMS: blockMS}, true
+	return &RedisStreamConsumer{addr: addr, streamKey: streamKey, postgres: postgres, blockMS: blockMS}, true
 }
 
-func (c *redisStreamConsumer) run(ctx context.Context) {
+func (c *RedisStreamConsumer) Run(ctx context.Context) {
 	log.Printf("redis stream consumer started, stream=%s, addr=%s", c.streamKey, c.addr)
 	defer log.Printf("redis stream consumer stopped")
 
@@ -89,7 +89,7 @@ type streamMessage struct {
 	Values map[string]any
 }
 
-func (c *redisStreamConsumer) readOnce(ctx context.Context, lastID string) ([]streamMessage, error) {
+func (c *RedisStreamConsumer) readOnce(ctx context.Context, lastID string) ([]streamMessage, error) {
 	conn, err := net.DialTimeout("tcp", c.addr, 2*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("dial redis: %w", err)

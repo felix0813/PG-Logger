@@ -35,8 +35,8 @@ func main() {
 	appCtx, appCancel := context.WithCancel(context.Background())
 	defer appCancel()
 
-	if consumer, ok := newRedisStreamConsumer(db); ok {
-		go consumer.run(appCtx)
+	if consumer, ok := handler.NewRedisStreamConsumer(db); ok {
+		go consumer.Run(appCtx)
 	}
 
 	mux := http.NewServeMux()
