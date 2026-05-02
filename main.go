@@ -32,6 +32,13 @@ func main() {
 	}
 	defer db.Close()
 
+	appCtx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+
+	if consumer, ok := newRedisStreamConsumer(db); ok {
+		go consumer.run(appCtx)
+	}
+
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, db)
 
@@ -54,6 +61,7 @@ func main() {
 	<-quit
 	log.Printf("shutdown signal received")
 
+	appCancel()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
